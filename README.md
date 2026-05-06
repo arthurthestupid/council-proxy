@@ -45,7 +45,7 @@ A single LLM has bias, hallucinations, and silent failure modes. Multi-LLM ensem
 
 - **N-way fan-out** — Router decides per-request whether to call tools or dispatch to all council members in parallel
 - **Chairman fusion** — A dedicated LLM synthesizes the N responses into a single answer with a citation/scoring footer (`📊 council eval #NNN`)
-- **Protocol adaptation for strict providers** — Built-in handling for DeepSeek V4's protocol quirks (8 known traps, see `dsv4*` functions): `thinking:disabled` enforcement, `image_url` stripping, `reasoning_content` round-trip handling, `assistant→tool` message sequencing, automatic `tool_call` field completion
+- **Protocol adaptation for strict providers** — Built-in handling for DeepSeek V4's protocol quirks (8 known traps catalogued during integration; the five most common shown here): `thinking:disabled` enforcement, `image_url` stripping, `reasoning_content` round-trip handling, `assistant→tool` message sequencing, automatic `tool_call` field completion. See `dsv4*` functions in the source for the full set.
 - **Tool-call loop with stuck detection** — Up to 10 rounds; auto-falls-through to consensus when 5 consecutive search-class tool calls fail
 - **Composite search** — Tavily/Exa primary + SearXNG fallback, with a state machine that auto-switches when quota/auth errors are detected
 - **Permanent archive** — Every council turn writes a JSON file with all member responses, skipped members + reasons, and Chairman output. Users can reference past turns with `#NNN` to inject historical context (bypasses upstream client's context window compression)
@@ -92,7 +92,7 @@ curl -X POST http://127.0.0.1:3460/v1/chat/completions \
 OPENROUTER_API_KEY=sk-or-v1-...
 ```
 
-This drives all council members and (with one tweak in `council-proxy.mjs`) the Chairman as well. Get a key at [openrouter.ai](https://openrouter.ai).
+This drives all council members. The Chairman defaults to a direct DeepSeek connection (see Multi-provider below); routing it through OpenRouter is also possible by editing `CHAIRMAN_PRIMARY` in `council-proxy.mjs`. Get a key at [openrouter.ai](https://openrouter.ai).
 
 ### Multi-provider (for production / cost optimization)
 
@@ -101,7 +101,7 @@ OPENROUTER_API_KEY=sk-or-v1-...    # for council members
 DEEPSEEK_API_KEY=sk-...            # for Chairman, direct connection
 ```
 
-Direct connection to DeepSeek for the Chairman can be 5-10x faster than OpenRouter under load (OpenRouter occasionally has capacity-driven 40s timeouts).
+Direct connection to DeepSeek for the Chairman is noticeably faster on average. OpenRouter occasionally hits capacity-driven 40s timeouts on V4 Flash, while direct connection typically responds in 3-15s for similar requests.
 
 ### Member lineup
 
@@ -116,11 +116,13 @@ Council members are defined in `council-proxy.mjs` near the top (`const MEMBERS 
 
 > Specs verified against [OpenRouter API](https://openrouter.ai/api/v1/models) and provider documentation as of 2026-05.
 
-**You can — and should — swap these for your own preferences.** Other validated members (kept disabled in the source for reference): Step 3.5 Flash, GLM-4.7, MiMo-V2, Gemini 2.5. Member IDs (A, B, C, ...) are stable and never reused even after a model is removed, so historical archive references stay correct.
+**You can — and should — swap these for your own preferences.** Other previously tested members (kept in the source as `enabled: false` for reference, with the reason each was disabled): Step 3.5 Flash (long-tail latency), GLM-4.7 Flash (slow and low adoption rate), MiMo-V2 Flash (occasional 40s timeouts), Gemini 2.5 Flash (superseded by 3.1 Flash Lite). Member IDs (A, B, C, ...) are stable and never reused even after a model is removed, so historical archive references stay correct.
 
 The Chairman defaults to DeepSeek V4 Flash (direct connection). Fallback is Grok 4.1 Fast via OpenRouter.
 
 ## Use cases
+
+> The author's daily driver is Hermes, which is battle-tested against this proxy. The other clients below use standard OpenAI-compatible interfaces and should work, but haven't been validated end-to-end by the author — please report issues if you hit any.
 
 ### As a Hermes (NousResearch) provider
 
