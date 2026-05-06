@@ -109,10 +109,12 @@ Council members are defined in `council-proxy.mjs` near the top (`const MEMBERS 
 
 | Code | Model | Provider | Notes |
 |---|---|---|---|
-| **A** | Grok 4.1 Fast | xAI | Strong reasoning, vision, 256K context |
-| **C** | Qwen 3.5 Flash | Alibaba | Strong Chinese, vision, fast |
-| **H** | Gemini 3.1 Flash Lite Preview | Google | Vision, 1M context |
-| **J** | GPT-5.4 Nano | OpenAI | Fast, cheap, follows instructions reliably |
+| **A** | Grok 4.1 Fast | xAI | Reasoning, vision, **2M context** |
+| **C** | Qwen 3.5 Flash | Alibaba | Strong Chinese, **vision + video**, **1M context** |
+| **H** | Gemini 3.1 Flash Lite Preview | Google | **Full multimodal (image/audio/video)**, 1M context |
+| **J** | GPT-5.4 Nano | OpenAI | Fast, follows instructions reliably, 400K context |
+
+> Specs verified against [OpenRouter API](https://openrouter.ai/api/v1/models) and provider documentation as of 2026-05.
 
 **You can — and should — swap these for your own preferences.** Other validated members (kept disabled in the source for reference): Step 3.5 Flash, GLM-4.7, MiMo-V2, Gemini 2.5. Member IDs (A, B, C, ...) are stable and never reused even after a model is removed, so historical archive references stay correct.
 

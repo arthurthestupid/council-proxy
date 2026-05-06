@@ -48,7 +48,7 @@ const MEMBERS = [
     extraBody: { reasoning: { effort: 'low' } },
     apiKey: () => OPENROUTER_KEY,
     supportsVision: true,
-    contextLength: 256000,
+    contextLength: 2000000,
   },
   {
     id: 'B', name: 'Gemini 2.5 Flash', shortName: 'Gem2.5', provider: 'Google',
@@ -67,7 +67,7 @@ const MEMBERS = [
     extraBody: { reasoning: { max_tokens: 200 } },
     apiKey: () => OPENROUTER_KEY,
     supportsVision: true,
-    contextLength: 256000,
+    contextLength: 1000000,
   },
   {
     id: 'D', name: 'MiMo-V2-Flash', shortName: 'MiMo', provider: 'Xiaomi',
@@ -157,7 +157,7 @@ const CHAIRMAN_FALLBACK = {
   model: 'x-ai/grok-4.1-fast',
   apiKey: () => OPENROUTER_KEY,
   extraBody: { reasoning: { effort: 'low' } },
-  contextLength: 256000,
+  contextLength: 2000000,
   maxOutputTokens: 8000,
 };
 
