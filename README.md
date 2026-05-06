@@ -176,8 +176,8 @@ Key functions to read for understanding:
 
 Be honest with yourself before deploying this:
 
-- **5x LLM cost** — every council turn invokes 4 members + 1 Chairman. Not suited for high-frequency or real-time scenarios. Best for high-stakes, low-frequency tasks (analysis, decisions, complex Q&A).
-- **30-90s latency** — per turn, dominated by the slowest member. Fine for chat-paced workflows; bad for streaming UIs that expect <2s first token.
+- **30-90s latency per turn** — Dominated by the slowest member (4 in parallel + Chairman serial). Fine for chat-paced workflows (Discord, async agents); poor for streaming UIs that expect <2s first token.
+- **5 calls per turn, but cheap unit cost** — Each turn invokes 5 LLM calls (4 members + Chairman). The reference lineup uses fast/flash/nano-tier models, so each turn typically costs **$0.005–$0.02 USD**. Even at 100+ turns/day, monthly cost lands around **$15–30** — comparable to a single frontier-model call. The 5x multiplier doesn't matter when each individual call is cheap. *If you swap members for frontier models (Claude Opus, GPT-5 Pro), the multiplier becomes painful — keep the lineup quick.*
 - **Member homogenization risk** — same prompt + same context to 4 LLMs may produce surface-level "different perspectives" that converge under the hood. Diversity comes from genuinely different training corpora; cross-vendor selection helps but doesn't fully solve this.
 - **Configuration complexity** — at minimum 1 API key (OpenRouter); for full feature set 2+ keys (OpenRouter + DeepSeek direct).
 - **No native multi-LLM self-awareness in members** — each member sees only its own context and doesn't know it's part of a council. They can hallucinate "why other members didn't respond" when asked. The proxy mitigates this by injecting `skipped_members` reasons in archive references, but it's not a complete fix. See `buildArchiveInjectionMessage` for the current approach.
