@@ -30,7 +30,7 @@ const LOG_PATH = join(process.env.HOME || '/root', '.council-proxy', 'council-lo
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY || '';
 const OPENROUTER_BASE = 'https://openrouter.ai/api/v1';
 
-// DeepSeek 直连
+//  add (): DeepSeek 直连
 // OpenRouter 上的 V4 Flash 稳定 40s timeout(OpenRouter 路由/容量问题,非模型本身慢);
 // 直连 curl 实测短问题 3s,议会场景预期 5-15s。key 复用 secrets.env 里早有的 DEEPSEEK_API_KEY。
 const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY || '';
@@ -38,7 +38,7 @@ const DEEPSEEK_BASE = 'https://api.deepseek.com/v1';
 
 // ─── Council Members ────────────────────────────────────────────────────────
 
-// Members rotation:B/E/F 加 enabled: false 保留历史代号不复用,新增 H/I
+//  换血():B/E/F 加 enabled: false 保留历史代号不复用,新增 H/I
 // 活跃阵容:A(Grok) / C(Qwen) / D(MiMo) / H(Gem3.1L) / I(DSV4)
 const MEMBERS = [
   {
@@ -214,8 +214,8 @@ function validateToolCall(toolCall, toolsSchema) {
 // 集中处理 DSV4 跟标准 OpenAI Chat Completions 协议的差异。
 // 只对 provider === 'DeepSeek' 的 config 应用,其他模型路径不受影响。
 // 已适配陷阱清单:
-//   #1 thinking 必须 disabled:由 CHAIRMAN_PRIMARY.extraBody 配置
-//   #2 messages 中 image_url(及其他非 text)content 必须 strip
+//   #1 thinking 必须 disabled():由 CHAIRMAN_PRIMARY.extraBody 配置
+//   #2 messages 中 image_url(及其他非 text)content 必须 strip()
 //   #3 assistant tool_calls 后必须立即跟 role:tool message(frontEndRoute retry)
 //   #4 timeout 至少 45s(CHAIRMAN_TIMEOUT_MS / ROUTER_TIMEOUT_MS)
 //   #5 tool_calls JSON max_tokens 至少 4000(ROUTER_MAX_TOKENS)
@@ -288,7 +288,7 @@ function dsv4PrepareMessages(messages, options = {}) {
  *   { valid: true, toolCall, completed: [...] }  — toolCall args may be augmented
  *   { valid: false, error }                       — fundamentally invalid
  *
- * Use this instead of validateToolCall for DSV4 paths.
+ * Use this instead of validateToolCall() for DSV4 paths.
  */
 function dsv4ValidateAndCompleteToolCall(toolCall, toolsSchema) {
   if (!toolCall?.function?.name) {
@@ -373,7 +373,7 @@ function injectRouterGuidance(messages) {
   const marker = '[议会调度提示]';
   const firstSystemIdx = messages.findIndex(m => m.role === 'system');
   if (firstSystemIdx === -1) {
-    return [{ role: 'system', content: ROUTER_HONCHO_GUIDANCE.trim }, ...messages];
+    return [{ role: 'system', content: ROUTER_HONCHO_GUIDANCE.trim() }, ...messages];
   }
   const sys = messages[firstSystemIdx];
   const sysContent = typeof sys.content === 'string' ? sys.content : '';
@@ -402,7 +402,7 @@ const SEARCH_INTENT_KEYWORDS = [
   'today', 'latest', 'current', 'weather', 'price', 'news', 'search',
 ];
 
-function readSearchState {
+function readSearchState() {
   try {
     const data = JSON.parse(readFileSync(SEARCH_STATE_PATH, 'utf8'));
     return data.state || 'TAVILY';
@@ -413,13 +413,13 @@ function readSearchState {
 
 function containsSearchIntent(text) {
   if (!text || typeof text !== 'string' || text.length < 4) return false;
-  const lower = text.toLowerCase;
-  return SEARCH_INTENT_KEYWORDS.some(k => lower.includes(k.toLowerCase));
+  const lower = text.toLowerCase();
+  return SEARCH_INTENT_KEYWORDS.some(k => lower.includes(k.toLowerCase()));
 }
 
 function extractSearchQuery(userMsg) {
   if (!userMsg || typeof userMsg !== 'string') return '';
-  return userMsg.slice(0, 200).trim;
+  return userMsg.slice(0, 200).trim();
 }
 
 /**
@@ -428,15 +428,15 @@ function extractSearchQuery(userMsg) {
  */
 async function callSearxng(query, limit = 5) {
   if (!query) return null;
-  const ctrl = new AbortController;
-  const timer = setTimeout( => ctrl.abort, 3000);
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 3000);
   try {
     const res = await fetch(
       `http://127.0.0.1:8888/search?q=${encodeURIComponent(query)}&format=json&categories=general`,
       { signal: ctrl.signal }
     );
     clearTimeout(timer);
-    const data = await res.json;
+    const data = await res.json();
     const results = (data.results || []).slice(0, limit);
     if (results.length === 0) return null;
     return results
@@ -569,15 +569,15 @@ async function routeRequest(messages, toolsSchema) {
   const routerMessages = injectRouterGuidance(adaptedMessages);
 
   // Call Router with tools schema so it can generate tool_calls natively
-  const controller = new AbortController;
-  const timer = setTimeout( => controller.abort, ROUTER_TIMEOUT_MS);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ROUTER_TIMEOUT_MS);
 
   try {
     const response = await fetch(`${routerConfig.baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${routerConfig.apiKey}`,
+        'Authorization': `Bearer ${routerConfig.apiKey()}`,
       },
       body: JSON.stringify(
         //  第二层:DSV4 出站参数净化(strip n/user/seed 等议会用不到的字段)
@@ -599,11 +599,11 @@ async function routeRequest(messages, toolsSchema) {
     });
 
     if (!response.ok) {
-      const errText = await response.text.catch( => 'unknown');
+      const errText = await response.text().catch(() => 'unknown');
       throw new Error(`Router HTTP ${response.status}: ${errText.slice(0, 200)}`);
     }
 
-    const data = await response.json;
+    const data = await response.json();
     const choice = data.choices?.[0];
 
     if (!choice) {
@@ -642,7 +642,7 @@ async function frontEndRoute(messages, toolsSchema) {
   //  ( 修正):原版用 push system message,但 dispatchToMembers 过滤所有 system,
   // Chairman 也不看 system,导致注入失效。改成 mutate 最后一条 user message content 直接 append,
   // 这样议会成员看到的 user msg + Chairman 的 originalQuestion 都包含 archive。
-  const lastUser = [...messages].reverse.find(m => m.role === 'user');
+  const lastUser = [...messages].reverse().find(m => m.role === 'user');
   const lastUserContent = typeof lastUser?.content === 'string' ? lastUser.content : '';
   const turnRefs = [...new Set([...lastUserContent.matchAll(/#(\d{1,6})/g)].map(m => parseInt(m[1], 10)))];
   if (turnRefs.length > 0 && turnRefs.length <= 5 && lastUser && typeof lastUser.content === 'string') {
@@ -658,9 +658,9 @@ async function frontEndRoute(messages, toolsSchema) {
   // 搜索后端状态机 — SEARXNG_ONLY 状态时跳过 Router,议会代理主动调 SearXNG
   // 触发条件:state=SEARXNG_ONLY + 这是用户新轮次(无 tool result 历史) + 消息含搜索意图关键词
   // 目的:Tavily + Exa 都 quota 用尽时仍能给议会成员注入实时数据
-  const searchState = readSearchState;
+  const searchState = readSearchState();
   if (searchState === 'SEARXNG_ONLY' && !hasToolResults(messages)) {
-    const lastUser = [...messages].reverse.find(m => m.role === 'user');
+    const lastUser = [...messages].reverse().find(m => m.role === 'user');
     const userText = typeof lastUser?.content === 'string' ? lastUser.content : '';
     if (containsSearchIntent(userText)) {
       const query = extractSearchQuery(userText);
@@ -726,7 +726,7 @@ async function frontEndRoute(messages, toolsSchema) {
     console.log(`  Router: tool results detected (round ${toolCallRounds}/${TOOL_CALL_MAX_ROUNDS}), checking if more tools needed...`);
 
     // --- SearXNG supplementary search ---
-    const lastAWT = [...messages].reverse
+    const lastAWT = [...messages].reverse()
       .find(m => m.role === 'assistant' && m.tool_calls?.length > 0);
     const wsc = lastAWT?.tool_calls?.find(tc => tc.function?.name === 'web_search');
     if (wsc) {
@@ -735,20 +735,20 @@ async function frontEndRoute(messages, toolsSchema) {
           ? JSON.parse(wsc.function.arguments) : wsc.function.arguments || {};
         const wsQ = wsArgs.query || wsArgs.q || '';
         if (wsQ) {
-          const sCtrl = new AbortController;
-          const sTimer = setTimeout( => sCtrl.abort, 3000);
+          const sCtrl = new AbortController();
+          const sTimer = setTimeout(() => sCtrl.abort(), 3000);
           const sRes = await fetch(
             `http://127.0.0.1:8888/search?q=${encodeURIComponent(wsQ)}&format=json&categories=general`,
             { signal: sCtrl.signal }
           );
           clearTimeout(sTimer);
-          const sData = await sRes.json;
+          const sData = await sRes.json();
           const sResults = (sData.results || []).slice(0, 5);
           if (sResults.length > 0) {
             const supp = sResults
               .map((r, i) => `${i+1}. ${r.title || '?'} - ${r.url || ''}\n   ${(r.content || '').slice(0, 150)}`)
               .join('\n');
-            const lastWR = [...messages].reverse
+            const lastWR = [...messages].reverse()
               .find(m => m.role === 'tool' && (m.name === 'web_search' || m.name === 'search'));
             const pFailed = lastWR?.content && (
               lastWR.content.includes('503') || lastWR.content.includes('error') || lastWR.content.length < 50);
@@ -807,9 +807,9 @@ async function frontEndRoute(messages, toolsSchema) {
         return {
           action: 'tool_call',
           response: {
-            id: `council-${Date.now}`,
+            id: `council-${Date.now()}`,
             object: 'chat.completion',
-            created: Math.floor(Date.now / 1000),
+            created: Math.floor(Date.now() / 1000),
             model: 'council-v1/router',
             choices: [{
               index: 0,
@@ -900,9 +900,9 @@ async function frontEndRoute(messages, toolsSchema) {
               return {
                 action: 'tool_call',
                 response: {
-                  id: `council-${Date.now}`,
+                  id: `council-${Date.now()}`,
                   object: 'chat.completion',
-                  created: Math.floor(Date.now / 1000),
+                  created: Math.floor(Date.now() / 1000),
                   model: 'council-v1/router-fallback',
                   choices: [{
                     index: 0,
@@ -932,7 +932,7 @@ async function frontEndRoute(messages, toolsSchema) {
  * 从 client-provided system prompt 中抽取给议会成员的紧凑上下文摘要。
  * host application's ephemeral channel_prompt 通常 append 在 system 尾部,这里抽 "最后一段" +
  * 用户称呼 hint。控制在约 500 字符,避免成员 input token × 6 倍爆炸。
- *  新增。
+ *  新增()。
  */
 function extractMemberContextBrief(originalSystemPrompt) {
   if (!originalSystemPrompt || originalSystemPrompt.length === 0) return '';
@@ -947,7 +947,7 @@ function extractMemberContextBrief(originalSystemPrompt) {
   // 2. 环境/频道上下文:取 system prompt 尾部 ~500 字符
   //    host appends channel_prompt 作为 ephemeral append 在尾部,大概率包含频道规则和会话元数据
   const tailLen = Math.min(500, originalSystemPrompt.length);
-  const tail = originalSystemPrompt.slice(-tailLen).trim;
+  const tail = originalSystemPrompt.slice(-tailLen).trim();
   if (tail.length > 0) {
     const hasChannelMarker = /#\S+|你现在在|当前频道|channel/i.test(tail);
     const label = hasChannelMarker ? '当前环境/频道规则' : '当前环境上下文(系统 prompt 尾部片段)';
@@ -960,7 +960,7 @@ function extractMemberContextBrief(originalSystemPrompt) {
 
 /**
  * 构造议会成员的 system prompt。
- *  修正:成员不再完全剥离 user context。在泛型 preamble 基础上,
+ *  修正():成员不再完全剥离 user context。在泛型 preamble 基础上,
  * 追加从 client system 中抽取的"频道 + 用户称呼"摘要,约 500 字增量,
  * 让成员能认知环境但不会导致 token × 6 爆炸。
  */
@@ -975,15 +975,15 @@ const ARCHIVE_DIR = process.env.ARCHIVE_DIR ||
   join(process.env.HOME || '/tmp', '.council-proxy', 'archive');
 const COUNTER_FILE = `${ARCHIVE_DIR}/.counter`;
 
-function ensureArchiveDir {
+function ensureArchiveDir() {
   try { mkdirSync(ARCHIVE_DIR, { recursive: true }); } catch {}
 }
 
-function getNextCouncilTurnId {
-  ensureArchiveDir;
+function getNextCouncilTurnId() {
+  ensureArchiveDir();
   let n = 0;
   try {
-    n = parseInt(readFileSync(COUNTER_FILE, 'utf8').trim, 10) || 0;
+    n = parseInt(readFileSync(COUNTER_FILE, 'utf8').trim(), 10) || 0;
   } catch {}
   n += 1;
   try {
@@ -995,11 +995,11 @@ function getNextCouncilTurnId {
 }
 
 function writeCouncilArchive(turnId, originalQuestion, memberResponses, skippedMembers, chairmanContent, chairmanName) {
-  ensureArchiveDir;
+  ensureArchiveDir();
   const filename = `${ARCHIVE_DIR}/${String(turnId).padStart(6, '0')}.json`;
   const archive = {
     id: turnId,
-    timestamp: new Date.toISOString,
+    timestamp: new Date().toISOString(),
     user_msg: typeof originalQuestion === 'string' ? originalQuestion : JSON.stringify(originalQuestion),
     user_msg_excerpt: (typeof originalQuestion === 'string' ? originalQuestion : '').slice(0, 200),
     member_responses: memberResponses.map(r => ({
@@ -1090,7 +1090,7 @@ Instructions:
 
 /**
  * 构造议会 Chairman 的"融合任务" user message。
- *  重构:Chairman 的 system = client-provided system(不 slice,保持 Alfred 身份、
+ *  重构():Chairman 的 system = client-provided system(不 slice,保持 Alfred 身份、
  * Memory、频道规则完整),融合指令 + 成员答案作为 user message。
  * 旧版 buildChairmanPrompt 把"slice 过的 identity + 任务"拼成一个 system 字符串已废弃,
  * 因为 slice(0, 6000) 会把 host appends 在 system 尾部的 channel_prompt 切掉,
@@ -1162,7 +1162,7 @@ ${responsesBlock}`;
  */
 function stripThinkTags(text) {
   if (!text) return text;
-  return text.replace(/<think>[\s\S]*?<\/think>\s*/g, '').trim;
+  return text.replace(/<think>[\s\S]*?<\/think>\s*/g, '').trim();
 }
 
 /**
@@ -1186,8 +1186,8 @@ function addCacheControl(messages) {
 }
 
 async function callModel(config, messages, timeoutMs) {
-  const controller = new AbortController;
-  const timer = setTimeout( => controller.abort, timeoutMs);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   // DSV4 协议适配层 — 仅在 DeepSeek provider 时应用。
   // 处理 traps #2 (image_url strip) + #7 (reasoning_content strip)。
@@ -1201,7 +1201,7 @@ async function callModel(config, messages, timeoutMs) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.apiKey}`,
+        'Authorization': `Bearer ${config.apiKey()}`,
       },
       body: JSON.stringify({
         model: config.model,
@@ -1215,11 +1215,11 @@ async function callModel(config, messages, timeoutMs) {
     });
 
     if (!response.ok) {
-      const errText = await response.text.catch( => 'unknown');
+      const errText = await response.text().catch(() => 'unknown');
       throw new Error(`HTTP ${response.status}: ${errText.slice(0, 200)}`);
     }
 
-    const data = await response.json;
+    const data = await response.json();
     let content = data.choices?.[0]?.message?.content;
 
     // Some models (StepFun) put answer in reasoning field when content is empty
@@ -1247,15 +1247,15 @@ async function callModel(config, messages, timeoutMs) {
  * Call a Council member with the user's question.
  */
 async function callMember(member, messages) {
-  const start = Date.now;
+  const start = Date.now();
   try {
     const { content, usage } = await callModel(member, messages, MEMBER_TIMEOUT_MS);
-    const elapsed = Date.now - start;
+    const elapsed = Date.now() - start;
     const tokens = `${usage.prompt_tokens || '?'}in/${usage.completion_tokens || '?'}out${usage.cached_tokens ? '/'+usage.cached_tokens+'cached' : ''}`;
     console.log(`  ✅ ${member.id}(${member.name}): ${elapsed}ms, ${content.length}ch, ${tokens}`);
     return { id: member.id, name: member.name, shortName: member.shortName, content, elapsed, success: true, usage };
   } catch (err) {
-    const elapsed = Date.now - start;
+    const elapsed = Date.now() - start;
     const reason = err.name === 'AbortError' ? 'timeout' : err.message?.slice(0, 100);
     console.log(`  ❌ ${member.id}(${member.name}): ${elapsed}ms, error: ${reason}`);
     return { id: member.id, name: member.name, shortName: member.shortName, content: null, elapsed, success: false, error: reason, usage: {} };
@@ -1265,7 +1265,8 @@ async function callMember(member, messages) {
 /**
  * Call Chairman to fuse member responses.
  */
-async function callChairman(originalQuestion, memberResponses, skippedMembers, originalSystemPrompt, turnId = null) {  // Note:system = client-provided system(完整,不 slice),
+async function callChairman(originalQuestion, memberResponses, skippedMembers, originalSystemPrompt, turnId = null) {
+  //  修正():system = client-provided system(完整,不 slice),
   // user = 融合任务 + 成员答案。Chairman 天然以 Alfred 身份回应,频道规则和 Memory 不丢。
   // turnId 传入用于 #NNN 编号注入,Chairman 输出评估行带编号
   const systemContent = originalSystemPrompt || '你是一个智能助手。';
@@ -1316,7 +1317,7 @@ function hasImages(messages) {
 // ─── Logging ────────────────────────────────────────────────────────────────
 
 function logCouncilResult(question, memberResults, chairmanResult, totalElapsed) {
-  const timestamp = new Date.toISOString;
+  const timestamp = new Date().toISOString();
   const questionPreview = (typeof question === 'string' ? question : JSON.stringify(question)).slice(0, 100);
 
   const lines = [
@@ -1372,7 +1373,7 @@ function logCouncilResult(question, memberResults, chairmanResult, totalElapsed)
 // ─── Main Council Flow ──────────────────────────────────────────────────────
 
 async function runCouncil(requestBody) {
-  const startTime = Date.now;
+  const startTime = Date.now();
   const messages = requestBody.messages || [];
   const toolsSchema = requestBody.tools || [];
 
@@ -1389,7 +1390,7 @@ async function runCouncil(requestBody) {
   const routeResult = await frontEndRoute(messages, toolsSchema);
 
   if (routeResult.action === 'tool_call') {
-    console.log(`  🏛️ Council routing to tool call (${Date.now - startTime}ms)`);
+    console.log(`  🏛️ Council routing to tool call (${Date.now() - startTime}ms)`);
     return { type: 'tool_call', response: routeResult.response };
   }
 
@@ -1398,7 +1399,7 @@ async function runCouncil(requestBody) {
       type: 'text',
       content: routeResult.message,
       model: 'council-v1/error',
-      totalElapsed: Date.now - startTime,
+      totalElapsed: Date.now() - startTime,
     };
   }
 
@@ -1407,7 +1408,7 @@ async function runCouncil(requestBody) {
       type: 'text',
       content: routeResult.message,
       model: 'council-v1/limit-reached',
-      totalElapsed: Date.now - startTime,
+      totalElapsed: Date.now() - startTime,
     };
   }
 
@@ -1465,7 +1466,7 @@ async function runCouncil(requestBody) {
     if (successfulResponses.length === 1) {
       const solo = successfulResponses[0];
       console.log(`  ⚠️ Only 1 member responded, using ${solo.id} directly`);
-      const totalElapsed = Date.now - startTime;
+      const totalElapsed = Date.now() - startTime;
       return {
         type: 'text',
         content: solo.content + `\n\n⚡ 由单一模型 ${solo.name} 回复（议会未达法定人数）`,
@@ -1478,12 +1479,12 @@ async function runCouncil(requestBody) {
   }
 
   // 议会回合编号 — Chairman 输出评估行带 #NNN,Archive 持久化用
-  const turnId = getNextCouncilTurnId;
+  const turnId = getNextCouncilTurnId();
   console.log(`  🏷️  Council turn #${String(turnId).padStart(3, '0')}`);
 
   // Call Chairman
   const chairmanResult = await callChairman(originalQuestion, successfulResponses, skippedMembers, systemMsg?.content, turnId);
-  const totalElapsed = Date.now - startTime;
+  const totalElapsed = Date.now() - startTime;
 
   if (!chairmanResult) {
     // Chairman failed — use the longest member response as fallback
@@ -1575,8 +1576,8 @@ const server = createServer(async (req, res) => {
             'Connection': 'keep-alive',
           });
           const tc = result.response;
-          const sseId = tc.id || `council-${Date.now}`;
-          const created = tc.created || Math.floor(Date.now / 1000);
+          const sseId = tc.id || `council-${Date.now()}`;
+          const created = tc.created || Math.floor(Date.now() / 1000);
           const model = tc.model || 'council-v1/router';
           const toolCalls = tc.choices?.[0]?.message?.tool_calls || [];
 
@@ -1599,7 +1600,7 @@ const server = createServer(async (req, res) => {
 
           // End
           res.write('data: [DONE]\n\n');
-          res.end;
+          res.end();
           console.log(`  ✅ Sent SSE streaming tool_call (${toolCalls.length} calls)`);
         } else {
           // Non-streaming: original JSON format
@@ -1617,8 +1618,8 @@ const server = createServer(async (req, res) => {
           'Cache-Control': 'no-cache',
           'Connection': 'keep-alive',
         });
-        const sseId = `council-${Date.now}`;
-        const created = Math.floor(Date.now / 1000);
+        const sseId = `council-${Date.now()}`;
+        const created = Math.floor(Date.now() / 1000);
 
         // Chunk 1: role
         res.write(`data: ${JSON.stringify({
@@ -1644,15 +1645,15 @@ const server = createServer(async (req, res) => {
 
         // End
         res.write('data: [DONE]\n\n');
-        res.end;
+        res.end();
         console.log(`  ✅ Sent SSE streaming response (${result.content.length} chars)`);
       } else {
         // Non-streaming: original JSON format
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
-          id: `council-${Date.now}`,
+          id: `council-${Date.now()}`,
           object: 'chat.completion',
-          created: Math.floor(Date.now / 1000),
+          created: Math.floor(Date.now() / 1000),
           model: result.model,
           choices: [{
             index: 0,
@@ -1681,7 +1682,7 @@ const server = createServer(async (req, res) => {
   res.end(JSON.stringify({ error: { message: 'Not found' } }));
 });
 
-server.listen(PORT, HOST,  => {
+server.listen(PORT, HOST, () => {
   console.log(`🏛️ Council Proxy v3.0.0 (OpenRouter + Router) listening on ${HOST}:${PORT}`);
   console.log(`   Members: ${MEMBERS.map(m => `${m.id}(${m.name})${m.enabled === false ? '[DISABLED]' : ''}`).join(', ')}`);
   console.log(`   Active:  ${MEMBERS.filter(m => m.enabled !== false).map(m => m.id).join('/')}`);
