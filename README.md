@@ -109,7 +109,7 @@ Council members are defined in `council-proxy.mjs` near the top (`const MEMBERS 
 
 | Code | Model | Provider | Notes |
 |---|---|---|---|
-| **A** | Grok 4.1 Fast | xAI | Reasoning, vision, **2M context** |
+| **A** | Mistral Small 4 | Mistral 🇫🇷 | Vision, **256K context**, MoE 119B/6.5B active, Apache 2.0 open weight |
 | **C** | Qwen 3.5 Flash | Alibaba | Strong Chinese, **vision + video**, **1M context** |
 | **H** | Gemini 3.1 Flash Lite Preview | Google | **Full multimodal (image/audio/video)**, 1M context |
 | **J** | GPT-5.4 Nano | OpenAI | Fast, follows instructions reliably, 400K context |
@@ -118,7 +118,7 @@ Council members are defined in `council-proxy.mjs` near the top (`const MEMBERS 
 
 **You can — and should — swap these for your own preferences.** Other previously tested members (kept in the source as `enabled: false` for reference, with the reason each was disabled): Step 3.5 Flash (long-tail latency), GLM-4.7 Flash (slow and low adoption rate), MiMo-V2 Flash (occasional 40s timeouts), Gemini 2.5 Flash (superseded by 3.1 Flash Lite). Member IDs (A, B, C, ...) are stable and never reused even after a model is removed, so historical archive references stay correct.
 
-The Chairman defaults to DeepSeek V4 Flash (direct connection). Fallback is Grok 4.1 Fast via OpenRouter.
+The Chairman defaults to DeepSeek V4 Flash (direct connection). Fallback is Mistral Small 4 via OpenRouter.
 
 ## Use cases
 

@@ -42,13 +42,12 @@ const DEEPSEEK_BASE = 'https://api.deepseek.com/v1';
 // 活跃阵容:A(Grok) / C(Qwen) / D(MiMo) / H(Gem3.1L) / I(DSV4)
 const MEMBERS = [
   {
-    id: 'A', name: 'Grok 4.1 Fast', shortName: 'Grok', provider: 'xAI',
+    id: 'A', name: 'Mistral Small 4', shortName: 'Mistral', provider: 'Mistral',
     baseUrl: OPENROUTER_BASE,
-    model: 'x-ai/grok-4.1-fast',
-    extraBody: { reasoning: { effort: 'low' } },
+    model: 'mistralai/mistral-small-2603',
     apiKey: () => OPENROUTER_KEY,
     supportsVision: true,
-    contextLength: 2000000,
+    contextLength: 262144,
   },
   {
     id: 'B', name: 'Gemini 2.5 Flash', shortName: 'Gem2.5', provider: 'Google',
@@ -152,12 +151,11 @@ const CHAIRMAN_PRIMARY = {
 };
 
 const CHAIRMAN_FALLBACK = {
-  id: 'Chairman-FB', name: 'Grok 4.1 Fast', provider: 'xAI',
+  id: 'Chairman-FB', name: 'Mistral Small 4', provider: 'Mistral',
   baseUrl: OPENROUTER_BASE,
-  model: 'x-ai/grok-4.1-fast',
+  model: 'mistralai/mistral-small-2603',
   apiKey: () => OPENROUTER_KEY,
-  extraBody: { reasoning: { effort: 'low' } },
-  contextLength: 2000000,
+  contextLength: 262144,
   maxOutputTokens: 8000,
 };
 
